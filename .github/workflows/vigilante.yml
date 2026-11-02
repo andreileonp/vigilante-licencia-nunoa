@@ -11,7 +11,7 @@ on:
         default: false
 
 permissions:
-  contents: write            # para guardar la última fecha avisada
+  contents: read
 
 concurrency:
   group: vigilante
@@ -50,16 +50,6 @@ jobs:
           name: captura-error
           path: error.png
           retention-days: 3
-
-      - name: Guardar última fecha avisada
-        run: |
-          git config user.name "vigilante-bot"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A ultimo_aviso.txt || true
-          if ! git diff --cached --quiet; then
-            git commit -m "Actualiza última fecha avisada"
-            git pull --rebase -q && git push -q
-          fi
 
       - name: Avisar (marca la ejecución en rojo para que GitHub envíe el correo)
         if: steps.revisar.outcome == 'failure'

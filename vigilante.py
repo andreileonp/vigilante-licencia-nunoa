@@ -4,13 +4,12 @@ Vigilante de horas - Primera Licencia de Conducir, Municipalidad de Ñuñoa.
 Abre la agenda (Agenda-T de Ingelan), selecciona el trámite y busca el día
 disponible MÁS CERCANO en el calendario.
 
-Solo avisa cuando aparece una fecha más cercana que la ya avisada, para no
-repetir el mismo aviso cada 5 minutos. La última fecha avisada se guarda en
-el archivo ultimo_aviso.txt del repositorio.
+En cada revisión, si hay al menos un día disponible, envía por Telegram la
+lista completa de días disponibles.
 
 Códigos de salida:
-  0 -> sin novedad (sin cupos, misma fecha ya avisada, o el sitio no respondió)
-  1 -> NUEVA FECHA MÁS CERCANA (GitHub marca la ejecución en rojo y envía un correo)
+  0 -> sin cupos, aviso enviado por Telegram, o el sitio no respondió
+  1 -> hay cupos pero Telegram falló (GitHub envía un correo de respaldo)
 """
 
 import os
@@ -18,7 +17,6 @@ import sys
 import urllib.request
 import urllib.parse
 from datetime import date
-from pathlib import Path
 
 from playwright.sync_api import sync_playwright
 
@@ -27,7 +25,6 @@ SUCURSAL = "3"   # Municipalidad de Ñuñoa
 CENTRO = "3"     # Licencia de Conducir
 SERVICIO = "1"   # Primera Licencia
 MESES_A_REVISAR = 4
-ESTADO = Path(__file__).with_name("ultimo_aviso.txt")
 
 MESES = {
     "enero": 1, "febrero": 2, "marzo": 3, "abril": 4, "mayo": 5, "junio": 6,
@@ -97,32 +94,20 @@ def buscar_dias_disponibles():
     return sorted(fechas)
 
 
-def leer_ultimo_aviso():
-    try:
-        return date.fromisoformat(ESTADO.read_text().strip())
-    except Exception:
-        return None
-
-
-def guardar_ultimo_aviso(fecha):
-    if fecha is None:
-        if ESTADO.exists():
-            ESTADO.unlink()
-    else:
-        ESTADO.write_text(fecha.isoformat() + "\n")
-
-
 def avisar_telegram(texto):
     token = os.environ.get("TELEGRAM_TOKEN")
     chat_id = os.environ.get("TELEGRAM_CHAT_ID")
     if not token or not chat_id:
-        return
+        print("Telegram no configurado.")
+        return False
     data = urllib.parse.urlencode({"chat_id": chat_id, "text": texto}).encode()
     try:
         urllib.request.urlopen(f"https://api.telegram.org/bot{token}/sendMessage", data, timeout=20)
         print("Aviso enviado por Telegram.")
-    except Exception as e:  # el correo de GitHub igual llega
+        return True
+    except Exception as e:
         print(f"No se pudo enviar Telegram: {e}")
+        return False
 
 
 def main():
@@ -145,38 +130,29 @@ def main():
         print(f"::warning::No se pudo revisar el sitio ({e}). Se reintenta en la próxima ejecución.")
         return 0
 
-    anterior = leer_ultimo_aviso()
-
     if not fechas:
         print("Sin cupos disponibles por ahora.")
-        guardar_ultimo_aviso(None)  # si vuelven a aparecer, se avisará de nuevo
         return 0
 
-    mas_cercana = fechas[0]
-    print(f"Fecha más cercana disponible: {mas_cercana.strftime('%d-%m-%Y')}")
-
-    if anterior is not None and mas_cercana >= anterior:
-        print(f"Ya se avisó una fecha igual o más cercana ({anterior.strftime('%d-%m-%Y')}). Sin aviso nuevo.")
-        if mas_cercana != anterior:
-            guardar_ultimo_aviso(mas_cercana)
-        return 0
-
-    guardar_ultimo_aviso(mas_cercana)
-    texto_fecha = mas_cercana.strftime("%d-%m-%Y")
+    dias_semana = ["lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "domingo"]
+    lineas = [f"• {dias_semana[f.weekday()]} {f.strftime('%d-%m-%Y')}" for f in fechas]
     mensaje = (
-        "¡Hay hora para Primera Licencia en Ñuñoa!\n"
-        f"Fecha más cercana: {texto_fecha}\n"
-        f"Reserva aquí: {URL}"
+        f"¡Hay {len(fechas)} día(s) con horas para Primera Licencia en Ñuñoa!\n"
+        + "\n".join(lineas)
+        + f"\n\nReserva aquí: {URL}"
     )
-    print(f"::error title=Hora disponible {texto_fecha}::{mensaje.replace(chr(10), ' | ')}")
-    avisar_telegram(mensaje)
+    print(mensaje)
 
     summary = os.environ.get("GITHUB_STEP_SUMMARY")
     if summary:
         with open(summary, "a", encoding="utf-8") as f:
-            f.write(f"## ✅ Hora disponible: {texto_fecha}\n\n[Reservar ahora]({URL})\n")
-    return 1
+            f.write("## ✅ Días disponibles\n\n" + "\n".join(lineas) + f"\n\n[Reservar ahora]({URL})\n")
 
+    if avisar_telegram(mensaje):
+        return 0
+    # Si Telegram falla, la ejecución queda en rojo y GitHub envía un correo de respaldo
+    print("::error title=Hay horas disponibles::Telegram falló; revisa la agenda.")
+    return 1
 
 if __name__ == "__main__":
     sys.exit(main())
