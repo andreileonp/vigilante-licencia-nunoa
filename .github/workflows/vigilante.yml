@@ -6,7 +6,7 @@ on:
   workflow_dispatch:         # permite ejecutarlo a mano desde la pestaña Actions
     inputs:
       prueba:
-        description: "Enviar un aviso de PRUEBA (no revisa el sitio)"
+        description: "Prueba completa: lee la agenda real y envía un aviso de ejemplo"
         type: boolean
         default: false
 

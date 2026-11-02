@@ -111,24 +111,23 @@ def avisar_telegram(texto):
 
 
 def main():
-    if os.environ.get("PRUEBA") == "true":
-        mensaje = (
-            "🔔 PRUEBA del vigilante de Primera Licencia Ñuñoa.\n"
-            "Si recibes esto, los avisos funcionan. (No es una hora real.)"
-        )
-        print(f"::error title=PRUEBA de aviso::{mensaje.replace(chr(10), ' | ')}")
-        avisar_telegram(mensaje)
-        summary = os.environ.get("GITHUB_STEP_SUMMARY")
-        if summary:
-            with open(summary, "a", encoding="utf-8") as f:
-                f.write("## 🔔 Aviso de PRUEBA\n\nSi te llegó el correo, las alertas funcionan.\n")
-        return 1
+    prueba = os.environ.get("PRUEBA") == "true"
 
     try:
         fechas = buscar_dias_disponibles()
     except Exception as e:
         print(f"::warning::No se pudo revisar el sitio ({e}). Se reintenta en la próxima ejecución.")
+        if prueba:
+            avisar_telegram(f"⚠️ PRUEBA: el vigilante NO pudo leer la agenda ({e}).")
         return 0
+
+    print(f"Lectura real de la agenda: {len(fechas)} día(s) disponibles.")
+    if prueba:
+        # Prueba completa: usa la lectura real y, si no hay cupos, agrega un día ficticio
+        # para recorrer el mismo camino que un aviso real.
+        reales = len(fechas)
+        if not fechas:
+            fechas = [date.today()]
 
     if not fechas:
         print("Sin cupos disponibles por ahora.")
@@ -136,7 +135,11 @@ def main():
 
     dias_semana = ["lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "domingo"]
     lineas = [f"• {dias_semana[f.weekday()]} {f.strftime('%d-%m-%Y')}" for f in fechas]
-    mensaje = (
+    encabezado = ""
+    if prueba:
+        encabezado = (f"🔔 PRUEBA (no es real). La agenda se leyó bien: hoy tiene {reales} día(s) "
+                      "disponibles. Así se verá un aviso real:\n\n")
+    mensaje = encabezado + (
         f"¡Hay {len(fechas)} día(s) con horas para Primera Licencia en Ñuñoa!\n"
         + "\n".join(lineas)
         + f"\n\nReserva aquí: {URL}"
