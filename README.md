@@ -1,12 +1,13 @@
 # Vigilante de horas — Primera Licencia (Ñuñoa)
 
-Revisa cada ~10 minutos la agenda de la Municipalidad de Ñuñoa
-(<https://nunoa.ingelan.cl/>) y avisa cuando aparece un día disponible para
-**Primera Licencia de Conducir**.
+Revisa cada ~5 minutos la agenda de la Municipalidad de Ñuñoa
+(<https://nunoa.ingelan.cl/>) y avisa la **fecha más cercana** disponible para
+**Primera Licencia de Conducir**. Solo vuelve a avisar si aparece una fecha
+aún más cercana (o si los cupos se agotan y reaparecen).
 
 ## Cómo avisa
 
-- **Correo (automático):** cuando hay cupos, la ejecución termina en "fallida" a
+- **Correo (automático):** cuando aparece una fecha nueva, la ejecución termina en "fallida" a
   propósito, y GitHub te envía un correo con el aviso. Revisa que en
   *GitHub → Settings → Notifications → Actions* esté activado
   "Send notifications for failed workflows only" con correo.
