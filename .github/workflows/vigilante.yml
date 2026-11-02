@@ -4,6 +4,11 @@ on:
   schedule:
     - cron: "*/5 * * * *"   # cada 5 minutos (mínimo de GitHub; puede retrasarse algunos minutos)
   workflow_dispatch:         # permite ejecutarlo a mano desde la pestaña Actions
+    inputs:
+      prueba:
+        description: "Enviar un aviso de PRUEBA (no revisa el sitio)"
+        type: boolean
+        default: false
 
 permissions:
   contents: write            # para guardar la última fecha avisada
@@ -35,6 +40,7 @@ jobs:
         env:
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          PRUEBA: ${{ inputs.prueba && 'true' || 'false' }}
         run: python vigilante.py
 
       - name: Guardar última fecha avisada

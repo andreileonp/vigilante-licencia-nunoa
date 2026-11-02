@@ -116,6 +116,19 @@ def avisar_telegram(texto):
 
 
 def main():
+    if os.environ.get("PRUEBA") == "true":
+        mensaje = (
+            "🔔 PRUEBA del vigilante de Primera Licencia Ñuñoa.\n"
+            "Si recibes esto, los avisos funcionan. (No es una hora real.)"
+        )
+        print(f"::error title=PRUEBA de aviso::{mensaje.replace(chr(10), ' | ')}")
+        avisar_telegram(mensaje)
+        summary = os.environ.get("GITHUB_STEP_SUMMARY")
+        if summary:
+            with open(summary, "a", encoding="utf-8") as f:
+                f.write("## 🔔 Aviso de PRUEBA\n\nSi te llegó el correo, las alertas funcionan.\n")
+        return 1
+
     try:
         fechas = buscar_dias_disponibles()
     except Exception as e:
