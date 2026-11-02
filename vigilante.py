@@ -51,11 +51,21 @@ def buscar_dias_disponibles():
         page.select_option("#txt_centroAtencion", CENTRO)
         page.wait_for_selector(f"#txt_servicios option[value='{SERVICIO}']", state="attached")
         page.select_option("#txt_servicios", SERVICIO)
-
-        page.click("a:has-text('Siguiente')")
-        page.wait_for_url("**/seleccionarCalendario.view.html")
-        page.wait_for_selector("#txt_fecha.hasDatepicker", state="attached")
         page.wait_for_load_state("networkidle")
+        page.wait_for_timeout(1500)
+
+        mensajes = []
+        page.on("dialog", lambda d: (mensajes.append(d.message), d.accept()))
+
+        try:
+            with page.expect_navigation(url="**/seleccionarCalendario.view.html", timeout=45000):
+                page.evaluate("generarA()")
+            page.wait_for_selector("#txt_fecha.hasDatepicker", state="attached", timeout=45000)
+            page.wait_for_load_state("networkidle")
+            page.wait_for_timeout(1500)
+        except Exception:
+            page.screenshot(path="error.png", full_page=True)
+            raise RuntimeError(f"No se llegó al calendario. URL={page.url} dialogos={mensajes}")
 
         crudos = page.evaluate(
             """(meses) => {

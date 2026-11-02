@@ -43,6 +43,14 @@ jobs:
           PRUEBA: ${{ inputs.prueba && 'true' || 'false' }}
         run: python vigilante.py
 
+      - name: Captura de error (diagnóstico)
+        if: hashFiles('error.png') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: captura-error
+          path: error.png
+          retention-days: 3
+
       - name: Guardar última fecha avisada
         run: |
           git config user.name "vigilante-bot"
